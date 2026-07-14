@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/catalog-service/src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "apps/catalog-service/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/catalog-service",
+  "projects": {
+    "catalog-service": {
+      "type": "application",
+      "root": "apps/catalog-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/catalog-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/catalog-service/tsconfig.app.json"
+      }
+    },
+    "database": {
+      "type": "library",
+      "root": "packages/database",
+      "entryFile": "index",
+      "sourceRoot": "packages/database/src",
+      "compilerOptions": {
+        "tsConfigPath": "packages/database/tsconfig.lib.json"
+      }
+    },
+    "inventory-service": {
+      "type": "application",
+      "root": "apps/inventory-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/inventory-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/inventory-service/tsconfig.app.json"
+      }
+    },
+    "logger": {
+      "type": "library",
+      "root": "packages/logger",
+      "entryFile": "index",
+      "sourceRoot": "packages/logger/src",
+      "compilerOptions": {
+        "tsConfigPath": "packages/logger/tsconfig.lib.json"
+      }
+    }
+  }
+}
