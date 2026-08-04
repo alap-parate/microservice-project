@@ -43,3 +43,6 @@ Thumbs.db
 .cache/
 tmp/
 temp/
+
+# Prisma generated clients
+apps/*/generated/

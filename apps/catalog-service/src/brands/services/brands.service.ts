@@ -1,85 +1,119 @@
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { BrandEntity } from "../entities/brand.entity";
-import { BrandSearchFilters, CreateBrandDto } from "../dto/brands.dto";
-import { ConflictException, NotFoundException } from "@nestjs/common";
-import { isUniqueConstraintViolation } from "@app/utils/exceptions";
+import { Injectable } from '@nestjs/common';
+import { Prisma, Brand, PrismaClient } from '../../../prisma/generated';
+import { BrandSearchFilters } from '../dto/brands.dto';
+import {
+  isForeignKeyViolation,
+  isRecordNotFound,
+  isUniqueConstraintViolation,
+} from '@app/utils/exceptions';
+import { PinoLogger } from '@app/logger';
+import {
+  BrandAlreadyExistsError,
+  BrandInUseError,
+  BrandNotFoundError,
+} from '../errors/brand-errors';
 
+@Injectable()
 export class BrandsService {
-    constructor(
-        @InjectRepository(BrandEntity)
-        private readonly brandRepository: Repository<BrandEntity>,
-    ) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly logger: PinoLogger,
+  ) {
+    this.logger.setContext(BrandsService.name);
+  }
 
-    async create(brand: CreateBrandDto): Promise<BrandEntity> {
-        const newBrand = this.brandRepository.create(brand);
+  async create(brand: { name: string }): Promise<Brand> {
+    try {
+      return await this.prisma.brand.create({
+        data: brand,
+      });
+    } catch (error) {
+      if (isUniqueConstraintViolation(error)) {
+        throw new BrandAlreadyExistsError(brand.name);
+      }
+      this.logger.error(
+        { err: error as Error },
+        `Failed to create brand, ${brand.name}`,
+      );
+      throw error;
+    }
+  }
 
-        try {
-            return await this.brandRepository.save(newBrand);
-        } catch (error) {
-            if(isUniqueConstraintViolation(error)) {
-                throw new ConflictException('Brand name already taken');
-            }
-            throw error;
-        }
+  async update(id: string, brandName: string): Promise<Brand> {
+    const brand = await this.prisma.brand.findUnique({ where: { id } });
+    if (!brand) {
+      throw new BrandNotFoundError(id);
     }
 
-    async updateBrand(id: string, brandName: string): Promise<BrandEntity> {
-        const brand = await this.brandRepository.findOne({ where: { id } });
+    try {
+      return await this.prisma.brand.update({
+        where: { id },
+        data: { name: brandName },
+      });
+    } catch (error) {
+      if (isUniqueConstraintViolation(error)) {
+        throw new BrandAlreadyExistsError(brandName);
+      }
+      this.logger.error(
+        { err: error as Error },
+        `Failed to update brand, ${id}`,
+      );
+      throw error;
+    }
+  }
 
-        if(!brand) {
-            throw new NotFoundException('Brand not found');
-        }
+  async delete(id: string): Promise<void> {
+    try {
+      await this.prisma.brand.delete({ where: { id } });
+    } catch (error) {
+      if (isRecordNotFound(error)) {
+        throw new BrandNotFoundError(id);
+      }
+      if (isForeignKeyViolation(error)) {
+        throw new BrandInUseError(id);
+      }
+      this.logger.error(
+        { err: error as Error },
+        `Failed to delete brand, ${id}`,
+      );
+      throw error;
+    }
+  }
 
-        brand.name = brandName;
-
-        await this.brandRepository.save(brand);
-
-        return brand;
+  async findById(id: string): Promise<Brand> {
+    const brand = await this.prisma.brand.findUnique({ where: { id } });
+    if (!brand) {
+      throw new BrandNotFoundError(id);
     }
 
-    async deleteBrandDto(id: string): Promise<void> {
-        const brand = await this.brandRepository.findOne({ where: { id } });
+    return brand;
+  }
 
-        if(!brand) {
-            throw new NotFoundException('Brand not found');
-        }
+  async filter(
+    filters: BrandSearchFilters,
+  ): Promise<{ brands: Brand[]; total: number }> {
+    const {
+      name,
+      page = 1,
+      limit = 10,
+      sort = 'asc',
+      sortBy = 'createdAt',
+    } = filters;
 
-        await this.brandRepository.delete(brand.id);
+    const where: Prisma.BrandWhereInput = name
+      ? { name: { contains: name, mode: 'insensitive' } }
+      : {};
 
-        return;
-    }
+    const [brands, total] = await Promise.all([
+      this.prisma.brand.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { [sortBy]: sort },
+      }),
+      this.prisma.brand.count({ where }),
+    ]);
 
-    async findOne(id: string): Promise<BrandEntity> {
-        const brand = await this.brandRepository.findOne({ where: { id } });
-        if(!brand) {
-            throw new NotFoundException('Brand not found');
-        }
-
-        return brand;
-    }
-
-    async findAll(filters: BrandSearchFilters): Promise<{ brands: BrandEntity[], total: number }> {
-        const queryBuilder = this.brandRepository.createQueryBuilder('brand');
-        const { name, page, limit, sort, sortBy } = filters;
-
-        if(name) {
-            queryBuilder.andWhere('brand.name ILIKE :name', { name: `%${name}%`});
-        }
-
-        if(page && limit) {
-            queryBuilder.skip((page - 1) * limit).take(limit);
-        }
-
-        if(sort && sortBy) {
-            queryBuilder.orderBy(`brand.${sortBy}`);
-        }
-
-        const [brands, total] = await queryBuilder.getManyAndCount();
-
-        return {
-            brands,
-            total,
-        };
-    }
+    return { brands, total };
+  }
 }

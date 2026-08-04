@@ -1,14 +1,17 @@
 import { Module } from '@nestjs/common';
-import { DatabaseModule } from '@app/database';
 import { LoggerModule } from '@app/logger';
+import { BrandsModule } from './brands/brands.module';
+import { CategoriesModule } from './categories/categories.module';
+import { PrismaModule } from './database/prisma.module';
+import { ProductsModule } from './products/products.module';
 
 @Module({
   imports: [
-    DatabaseModule.forRoot({
-      database: 'catalog',
-      envPrefix: 'CATALOG_',
-    }),
+    PrismaModule,
     LoggerModule,
+    BrandsModule,
+    CategoriesModule,
+    ProductsModule,
   ],
   controllers: [],
   providers: [],

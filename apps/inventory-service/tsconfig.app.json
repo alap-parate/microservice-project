@@ -4,6 +4,6 @@
     "declaration": false,
     "outDir": "../../dist/apps/inventory-service"
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "prisma/generated/**/*"],
   "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
 }
