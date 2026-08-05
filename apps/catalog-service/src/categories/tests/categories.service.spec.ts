@@ -318,11 +318,16 @@ describe('CategoriesService', () => {
       const category = {
         id,
         name: 'phones',
-        brandId: '62009639-741c-47e6-932c-248fe8ba7950',
-      } as Category;
+        brand: {
+          id: '62009639-741c-47e6-932c-248fe8ba7950',
+          name: 'Apple',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      };
       prisma.category.findUnique.mockResolvedValue(category);
       await expect(service.findById(id)).resolves.toEqual(category);
-      expect(prisma.category.findUnique).toHaveBeenCalledWith({ where: { id } });
+      expect(prisma.category.findUnique).toHaveBeenCalledWith({ where: { id }, include: { brand: true } });
     });
 
     it('should throw CategoryNotFoundError if category is not found', async () => {
@@ -331,7 +336,7 @@ describe('CategoriesService', () => {
       await expect(service.findById(id)).rejects.toThrow(
         new CategoryNotFoundError(id),
       );
-      expect(prisma.category.findUnique).toHaveBeenCalledWith({ where: { id } });
+      expect(prisma.category.findUnique).toHaveBeenCalledWith({ where: { id }, include: { brand: true } });
     });
 
     it('should throw repository error if findUnique fails', async () => {
@@ -339,7 +344,7 @@ describe('CategoriesService', () => {
       const databaseError = new Error('Database connection failed');
       prisma.category.findUnique.mockRejectedValue(databaseError);
       await expect(service.findById(id)).rejects.toThrow(databaseError);
-      expect(prisma.category.findUnique).toHaveBeenCalledWith({ where: { id } });
+      expect(prisma.category.findUnique).toHaveBeenCalledWith({ where: { id }, include: { brand: true } });
     });
   });
 

@@ -40,7 +40,7 @@ export const stockSearchFilters = z.object({
   limit: z.coerce.number().int().positive().optional(),
   sort: z.enum(SortOrder).optional().default(SortOrder.ASC),
   sortBy: z
-    .enum(['quantity', 'createdAt', 'updatedAt', 'productId'])
+    .enum(['quantity', 'createdAt', 'updatedAt'])
     .optional()
     .default('createdAt'),
 });

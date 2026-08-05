@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, Product, PrismaClient } from '../../../prisma/generated';
+import { Prisma, Product, PrismaClient, Brand, Category } from '../../../prisma/generated';
 import {
   CreateProductDto,
   ProductSearchFilters,
@@ -79,7 +79,7 @@ export class ProductsService {
     }
   }
 
-  async findById(id: string): Promise<Product> {
+  async findById(id: string): Promise<Pick<Product, "id" | "title" | "description" | "price"> & { brand: Pick<Brand, "id" | "name">; category: Pick<Category, "id" | "name"> }> {
     const product = await this.prisma.product.findUnique(
       { 
         where: { id },
@@ -88,6 +88,8 @@ export class ProductsService {
           title: true,
           price: true,
           description: true,
+          createdAt: true,
+          updatedAt: true,
           brand: {
             select: {
               id: true,
